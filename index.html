@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="Live Boom and Crash market signals with five transparent setup filters.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>BoomCrash Signals</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" href="./icon-512.png">
+  <link rel="apple-touch-icon" href="./icon-512.png">
+  <meta name="apple-mobile-web-app-title" content="B&C Signals">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.48.0/dist/tabler-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Teko:wght@500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bc-ground: #090c08;
+      --bc-surface: #0f140f;
+      --bc-raised: #141a14;
+      --bc-data: #8fd5a6;
+      --bc-secondary: #9cc0bb;
+      --bc-boom: #329f5b;
+      --bc-signal: #47e684;
+      --bc-filter-pass: #0c8346;
+      --bc-crash: #f84c45;
+      --bc-muted: #2c362d;
+      --bc-disconnected: #5e7775;
+      --bc-divider: #202820;
+      --bc-sheet: #101510;
+      --bc-display: "Teko", Impact, sans-serif;
+      --bc-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      --bc-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bc-ground); }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      padding: max(12px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+      overflow-x: clip;
+      background: var(--bc-ground);
+      color: #ecf2eb;
+      font-family: var(--bc-ui);
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input { font: inherit; }
+    button { color: inherit; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, input:focus-visible {
+      outline: 2px solid var(--bc-signal);
+      outline-offset: 3px;
+    }
+    .app-shell { width: min(100%, 540px); margin-inline: auto; }
+    .app-header { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .app-title { margin: 0; font-size: clamp(20px, 5.4vw, 24px); font-weight: 650; letter-spacing: -0.055em; line-height: 1.05; }
+    .connection { display: flex; align-items: center; gap: 7px; min-height: 28px; color: var(--bc-secondary); font-size: 12px; font-weight: 550; }
+    .connection-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--bc-disconnected); }
+    .connection-dot.is-live { background: var(--bc-signal); box-shadow: 0 0 8px #47e68470; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .settings-trigger, .quiet-button, .sheet-close {
+      min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid var(--bc-muted); border-radius: 12px; background: var(--bc-surface); color: var(--bc-secondary);
+      cursor: pointer; transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+    }
+    .settings-trigger { gap: 8px; padding: 0 12px; font-size: 13px; font-weight: 600; }
+    .settings-trigger i { font-size: 18px; line-height: 1; }
+    .settings-trigger:hover, .quiet-button:hover, .sheet-close:hover { border-color: #66816b; color: #f1f7f0; }
+    .icon-close { font-size: 19px; line-height: 1; }
+    .signal-banner { position: relative; margin: 12px 0; padding: 12px 40px 12px 13px; border: 1px solid #267340; border-radius: 13px; background: #112117; }
+    .signal-banner[hidden] { display: none; }
+    .signal-alert-body { width: 100%; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
+    .signal-alert-title { color: var(--bc-signal); font-size: 13px; line-height: 1.45; font-weight: 750; }
+    .signal-alert-levels { margin-top: 4px; color: #c4d5c7; font-family: var(--bc-mono); font-size: 11px; line-height: 1.55; overflow-wrap: anywhere; }
+    .signal-alert-dismiss { position: absolute; top: 7px; right: 7px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--bc-secondary); font-size: 22px; cursor: pointer; }
+    .market-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 12px; }
+    .market-card {
+      display: flex; min-width: 0; flex-direction: column; justify-content: space-between; gap: 11px;
+      min-height: 187px; padding: 13px 12px 12px; border: 1px solid #202820; border-radius: 16px;
+      background: var(--bc-surface); text-align: left; cursor: pointer;
+      transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
+    }
+    .market-card:hover { border-color: #435248; background: var(--bc-raised); }
+    .market-card:active { transform: scale(0.985); }
+    .market-card.is-boom { --market-accent: var(--bc-boom); }
+    .market-card.is-crash { --market-accent: var(--bc-crash); }
+    .market-card.is-a-plus { border-color: var(--market-accent); }
+    .market-heading { display: flex; align-items: center; justify-content: space-between; gap: 4px; color: #edf4ec; font-family: var(--bc-display); font-size: 23px; line-height: 1; letter-spacing: 0.045em; white-space: nowrap; }
+    .market-direction { color: var(--market-accent); font-family: var(--bc-ui); font-size: 17px; font-weight: 700; }
+    .market-price { display: block; margin-top: 3px; color: var(--bc-data); font-family: var(--bc-mono); font-size: clamp(19px, 5.8vw, 25px); font-variant-numeric: tabular-nums; font-weight: 600; line-height: 1.25; letter-spacing: -0.065em; overflow: hidden; text-overflow: clip; white-space: nowrap; }
+    .market-price.is-waiting { color: #708271; font-size: 15px; font-weight: 450; letter-spacing: -0.04em; white-space: normal; overflow-wrap: anywhere; }
+    .market-price.is-stale { color: #819387; }
+    .market-data-state { min-height: 14px; margin-top: 1px; color: var(--bc-secondary); font-size: 10px; line-height: 1.35; }
+    .metric-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-top: 9px; border-top: 1px solid var(--bc-divider); }
+    .metric-label { display: block; color: #9aac9f; font-size: 10px; line-height: 1.4; }
+    .metric-value { display: block; margin-top: 2px; color: #dae8dd; font-family: var(--bc-mono); font-size: 12px; font-variant-numeric: tabular-nums; line-height: 1.35; }
+    .setup-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 1px; }
+    .setup-copy { min-width: 0; color: var(--bc-secondary); font-size: 10px; line-height: 1.25; }
+    .setup-copy strong { display: block; margin-top: 2px; color: #f0f4ef; font-family: var(--bc-mono); font-size: 12px; font-weight: 600; }
+    .filter-dots { display: flex; flex: 0 0 auto; gap: 5px; }
+    .filter-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bc-muted); }
+    .filter-dot.is-pass { background: #25bd67; }
+    .filter-dot.is-fail { background: #68413f; }
+    .dashboard-note { margin: 13px 2px 0; color: var(--bc-secondary); font-size: 11px; line-height: 1.55; }
+    .dashboard-note strong { color: #d8e6d9; font-weight: 650; }
+    .runtime-notice { min-height: 16px; margin: 7px 2px 0; color: #b2c1b4; font-size: 11px; line-height: 1.5; }
+    .sheet-backdrop { position: fixed; z-index: 50; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: 24px; background: #000b; }
+    .sheet-backdrop[hidden] { display: none; }
+    .bottom-sheet { width: min(100%, 540px); max-height: min(86dvh, 760px); overflow-y: auto; overscroll-behavior: contain; padding: 12px 18px max(22px, env(safe-area-inset-bottom)); border: 1px solid #2c382e; border-bottom: 0; border-radius: 20px 20px 0 0; background: var(--bc-sheet); box-shadow: 0 -16px 54px #0008; animation: sheet-in 180ms ease-out both; }
+    .sheet-handle { width: 36px; height: 4px; margin: 0 auto 13px; border-radius: 9px; background: #485349; }
+    .sheet-topline { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .sheet-title { margin: 1px 0 0; color: #f0f5ef; font-size: 21px; letter-spacing: -0.04em; line-height: 1.15; }
+    .sheet-description { margin: 5px 0 0; color: var(--bc-secondary); font-size: 12px; line-height: 1.55; }
+    .sheet-close { flex: 0 0 44px; font-size: 21px; }
+    .signal-type { display: inline-flex; align-items: center; margin: 15px 0 11px; padding: 8px 11px; border-radius: 9px; background: #15241a; color: var(--bc-signal); font-family: var(--bc-display); font-size: 23px; line-height: 1; letter-spacing: 0.04em; }
+    .signal-type.is-crash { background: #291714; color: #ff827d; }
+    .levels-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 10px; }
+    .level-readout { min-width: 0; padding: 11px; border-radius: 11px; background: #151b15; }
+    .level-label { display: block; color: var(--bc-secondary); font-size: 11px; }
+    .level-value { display: block; margin-top: 5px; color: var(--bc-data); font-family: var(--bc-mono); font-size: 17px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .level-readout.is-stop .level-value { color: var(--bc-crash); }
+    .sheet-section-title { margin: 21px 0 8px; color: #e5eee5; font-size: 13px; font-weight: 650; }
+    .filter-list { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+    .filter-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 41px; padding: 7px 1px; border-bottom: 1px solid var(--bc-divider); font-size: 12px; }
+    .filter-item:last-child { border-bottom: 0; }
+    .filter-item-label { color: #d9e3d9; }
+    .filter-item-state { flex: 0 0 auto; color: var(--bc-secondary); text-align: right; font-size: 11px; }
+    .filter-item-state.is-pass { color: var(--bc-signal); }
+    .filter-item-state.is-fail { color: #ff827d; }
+    .settings-form { display: grid; gap: 13px; margin-top: 18px; }
+    .field { display: grid; gap: 6px; }
+    .field label { color: #dfe8df; font-size: 12px; font-weight: 580; }
+    .field input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #354036; border-radius: 10px; background: #0a0e0a; color: #eef4ee; font-family: var(--bc-mono); font-size: 14px; }
+    .field input::placeholder { color: #6f7f71; }
+    .field-hint { color: var(--bc-secondary); font-size: 11px; line-height: 1.5; }
+    .form-actions { display: grid; grid-template-columns: 1.2fr 1fr; gap: 9px; margin-top: 3px; }
+    .primary-button, .secondary-button { min-height: 46px; padding: 10px 12px; border-radius: 11px; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 140ms ease, background 140ms ease; }
+    .primary-button { border: 1px solid #3ba663; background: #27834c; color: #fff; }
+    .primary-button:hover { background: #319956; }
+    .secondary-button { border: 1px solid #47544a; background: #171e17; color: #e4ebe4; }
+    .secondary-button:hover { background: #202a20; }
+    .primary-button:disabled, .secondary-button:disabled { opacity: 0.58; cursor: wait; }
+    .form-status { min-height: 19px; margin: 0; color: var(--bc-secondary); font-size: 12px; line-height: 1.5; }
+    .form-status.is-error { color: #ff827d; }
+    .form-status.is-success { color: var(--bc-signal); }
+    .privacy-note { margin: 1px 0 0; color: #98a99b; font-size: 11px; line-height: 1.5; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @keyframes sheet-in { from { transform: translateY(18px); opacity: 0.75; } to { transform: translateY(0); opacity: 1; } }
+    @media (min-width: 520px) {
+      body { padding-inline: 20px; }
+      .market-grid { gap: 12px; }
+      .market-card { min-height: 194px; padding: 15px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell mx-auto w-full max-w-[540px]">
+    <header class="app-header flex items-center justify-between gap-2.5">
+      <div>
+        <h1 class="app-title">BoomCrash Signals</h1>
+        <div class="connection" aria-live="polite" aria-atomic="true">
+          <span id="connectionDot" class="connection-dot" aria-hidden="true"></span>
+          <span id="connectionLabel">Connecting</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="settingsTrigger" class="settings-trigger" type="button" aria-haspopup="dialog" aria-controls="appSheet">
+          <i class="ti ti-settings" aria-hidden="true"></i><span>Settings</span>
+        </button>
+      </div>
+    </header>
+
+    <section id="signalBanner" class="signal-banner" aria-label="New high quality signal" aria-live="assertive" hidden>
+      <button id="signalBannerOpen" class="signal-alert-body" type="button" aria-label="Open new signal details">
+        <span id="signalBannerTitle" class="signal-alert-title"></span>
+        <span id="signalBannerLevels" class="signal-alert-levels"></span>
+      </button>
+      <button id="signalBannerDismiss" class="signal-alert-dismiss" type="button" aria-label="Dismiss signal alert"><i class="ti ti-x-mark" aria-hidden="true"></i></button>
+    </section>
+
+    <section aria-label="Live synthetic index markets">
+      <h2 class="sr-only">Live markets</h2>
+      <div id="marketGrid" class="market-grid grid grid-cols-2 gap-2"></div>
+    </section>
+
+    <p class="dashboard-note"><strong>Setup confidence</strong> is the share of five checks currently met; it is not a win probability.</p>
+    <p id="runtimeNotice" class="runtime-notice" aria-live="polite"></p>
+  </main>
+
+  <div id="sheetBackdrop" class="sheet-backdrop" hidden aria-hidden="true">
+    <section id="appSheet" class="bottom-sheet" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="sheetTitle">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-topline">
+        <div>
+          <h2 id="sheetTitle" class="sheet-title">Market details</h2>
+          <p id="sheetDescription" class="sheet-description"></p>
+        </div>
+        <button id="sheetClose" class="sheet-close" type="button" aria-label="Close sheet"><i class="ti ti-x-mark icon-close" aria-hidden="true"></i></button>
+      </div>
+      <div id="sheetContent"></div>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const SETTINGS_KEY = 'boomcrash.settings.v1';
+      const FILTER_NAMES = [
+        ['spikeInterval', 'Ticks since spike'],
+        ['slowGrind', 'Slow grind'],
+        ['deadZone', 'Dead zone'],
+        ['rsi', 'RSI (14)'],
+        ['noRecentJump', 'No recent jump over 2 points']
+      ];
+      const MARKETS = [
+        { symbol: 'BOOM500', family: 'boom', scale: 500, spikeThreshold: 5, requiredTicks: 400, stopDistance: 3.5, tp1Distance: 4, tp2Distance: 8 },
+        { symbol: 'CRASH500', family: 'crash', scale: 500, spikeThreshold: 5, requiredTicks: 400, stopDistance: 3.5, tp1Distance: 4, tp2Distance: 8 },
+        { symbol: 'BOOM1000', family: 'boom', scale: 1000, spikeThreshold: 10, requiredTicks: 800, stopDistance: 6, tp1Distance: 8, tp2Distance: 15 },
+        { symbol: 'CRASH1000', family: 'crash', scale: 1000, spikeThreshold: 10, requiredTicks: 800, stopDistance: 6, tp1Distance: 8, tp2Distance: 15 }
+      ];
+      const stateBySymbol = Object.fromEntries(MARKETS.map(config => [config.symbol, {
+        config,
+        price: null,
+        digits: 2,
+        ticks: [],
+        ticksSinceSpike: 0,
+        hasBaseline: false,
+        hasObservedSpike: false,
+        rsi: null,
+        filters: Object.fromEntries(FILTER_NAMES.map(([key]) => [key, null])),
+        allFiltersPassed: false,
+        signal: null,
+        stale: true
+      }]));
+      const app = {
+        settings: loadSettings(),
+        connection: 'connecting',
+        connectionMessage: '',
+        socket: null,
+        connectionGeneration: 0,
+        reconnectTimer: null,
+        reconnectAttempts: 0,
+        sheet: null,
+        selectedSymbol: null,
+        lastFocusedElement: null,
+        bannerSignal: null,
+        bannerTimer: null,
+        telegramTestInFlight: false
+      };
+      const els = {
+        connectionDot: document.getElementById('connectionDot'),
+        connectionLabel: document.getElementById('connectionLabel'),
+        grid: document.getElementById('marketGrid'),
+        banner: document.getElementById('signalBanner'),
+        bannerTitle: document.getElementById('signalBannerTitle'),
+        bannerLevels: document.getElementById('signalBannerLevels'),
+        bannerOpen: document.getElementById('signalBannerOpen'),
+        bannerDismiss: document.getElementById('signalBannerDismiss'),
+        settingsTrigger: document.getElementById('settingsTrigger'),
+        backdrop: document.getElementById('sheetBackdrop'),
+        sheet: document.getElementById('appSheet'),
+        sheetTitle: document.getElementById('sheetTitle'),
+        sheetDescription: document.getElementById('sheetDescription'),
+        sheetClose: document.getElementById('sheetClose'),
+        sheetContent: document.getElementById('sheetContent'),
+        runtimeNotice: document.getElementById('runtimeNotice')
+      };
+
+      function loadSettings() {
+        const fallback = { appId: '1089', apiToken: '', telegramBotToken: '', telegramChatId: '' };
+        try {
+          const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+          if (!saved || typeof saved !== 'object') return fallback;
+          return {
+            appId: String(saved.appId || fallback.appId),
+            apiToken: String(saved.apiToken || ''),
+            telegramBotToken: String(saved.telegramBotToken || ''),
+            telegramChatId: String(saved.telegramChatId || '')
+          };
+        } catch (error) {
+          return fallback;
+        }
+      }
+
+      function formatPrice(value, digits) {
+        if (!Number.isFinite(value)) return '—';
+        return value.toFixed(Math.min(8, Math.max(2, Number.isInteger(digits) ? digits : 2)));
+      }
+
+      function getRsi(prices) {
+        if (prices.length < 15) return null;
+        const window = prices.slice(-15);
+        let gains = 0;
+        let losses = 0;
+        for (let index = 1; index < window.length; index += 1) {
+          const change = window[index] - window[index - 1];
+          if (change > 0) gains += change;
+          else if (change < 0) losses += Math.abs(change);
+        }
+        const averageGain = gains / 14;
+        const averageLoss = losses / 14;
+        if (averageGain === 0 && averageLoss === 0) return 50;
+        if (averageLoss === 0) return 100;
+        if (averageGain === 0) return 0;
+        const relativeStrength = averageGain / averageLoss;
+        return 100 - (100 / (1 + relativeStrength));
+      }
+
+      function evaluateFilters(market) {
+        const prices = market.ticks;
+        const config = market.config;
+        const count = prices.length;
+        const rsi = getRsi(prices);
+        market.rsi = rsi;
+
+        const firstWindow = count >= 15 ? prices.slice(-15, -10) : [];
+        const lastWindow = count >= 15 ? prices.slice(-5) : [];
+        const firstAverage = firstWindow.length ? firstWindow.reduce((sum, price) => sum + price, 0) / firstWindow.length : null;
+        const lastAverage = lastWindow.length ? lastWindow.reduce((sum, price) => sum + price, 0) / lastWindow.length : null;
+        const recentFour = count >= 4 ? prices.slice(-4) : [];
+        const recentFourRange = recentFour.length ? Math.max(...recentFour) - Math.min(...recentFour) : null;
+        const recentTwentyOne = count >= 21 ? prices.slice(-21) : [];
+        const recentMoves = recentTwentyOne.slice(1).map((price, index) => Math.abs(price - recentTwentyOne[index]));
+
+        market.filters = {
+          spikeInterval: market.hasObservedSpike ? market.ticksSinceSpike > config.requiredTicks : null,
+          slowGrind: count >= 15
+            ? (config.family === 'boom' ? lastAverage < firstAverage : lastAverage > firstAverage)
+            : null,
+          deadZone: count >= 4 ? recentFourRange < 0.3 : null,
+          rsi: rsi === null ? null : (config.family === 'boom' ? rsi < 35 : rsi > 65),
+          noRecentJump: count >= 21 ? recentMoves.every(change => change <= 2) : null
+        };
+        return Object.values(market.filters).every(value => value === true);
+      }
+
+      function createSignal(market) {
+        const config = market.config;
+        const direction = config.family === 'boom' ? 'BUY BOOM' : 'SELL CRASH';
+        const sign = config.family === 'boom' ? 1 : -1;
+        const entry = market.price;
+        return {
+          symbol: config.symbol,
+          family: config.family,
+          direction,
+          entry,
+          sl: entry - sign * config.stopDistance,
+          tp1: entry + sign * config.tp1Distance,
+          tp2: entry + sign * config.tp2Distance,
+          confidence: Object.values(market.filters).filter(value => value === true).length * 20,
+          ticksSinceSpike: market.ticksSinceSpike,
+          digits: market.digits,
+          createdAt: Date.now()
+        };
+      }
+
+      function signalMessage(signal) {
+        const arrow = signal.family === 'boom' ? '📈' : '📉';
+        const digits = signal.digits;
+        return [
+          `🔥 HIGH QUALITY SETUP - ${signal.symbol}`,
+          `Signal: ${signal.direction} ${arrow}`,
+          `Entry: ${formatPrice(signal.entry, digits)}`,
+          `SL: ${formatPrice(signal.sl, digits)}`,
+          `TP1: ${formatPrice(signal.tp1, digits)} (Close 70%)`,
+          `TP2: ${formatPrice(signal.tp2, digits)} (Close 30%)`,
+          `Confidence: ${signal.confidence}%`,
+          `Ticks since spike: ${signal.ticksSinceSpike}`
+        ].join('\n');
+      }
+
+      function processTick(symbol, quote, pipSize) {
+        const market = stateBySymbol[symbol];
+        if (!market || !Number.isFinite(quote)) return;
+        const wasAPlus = market.allFiltersPassed;
+        const previousPrice = market.price;
+        market.stale = false;
+        if (Number.isInteger(Number(pipSize)) && Number(pipSize) >= 0 && Number(pipSize) <= 8) market.digits = Number(pipSize);
+        market.price = quote;
+
+        if (previousPrice === null) {
+          market.hasBaseline = true;
+        } else if (Math.abs(quote - previousPrice) > market.config.spikeThreshold) {
+          market.hasObservedSpike = true;
+          market.ticksSinceSpike = 0;
+        } else if (market.hasObservedSpike) {
+          market.ticksSinceSpike += 1;
+        }
+
+        market.ticks.push(quote);
+        if (market.ticks.length > 100) market.ticks.shift();
+
+        const isAPlus = evaluateFilters(market);
+        market.allFiltersPassed = isAPlus;
+        if (!wasAPlus && isAPlus) {
+          market.signal = createSignal(market);
+          showSignalBanner(market.signal);
+          void sendTelegramSignal(market.signal);
+        } else if (!isAPlus) {
+          market.signal = null;
+        }
+        renderMarketCard(market);
+        if (app.sheet === 'market' && app.selectedSymbol === symbol) renderMarketSheet(symbol);
+      }
+
+      function renderMarketCard(market) {
+        const card = els.grid.querySelector(`[data-symbol="${market.config.symbol}"]`);
+        if (!card) return;
+        const config = market.config;
+        const filterCount = Object.values(market.filters).filter(value => value === true).length;
+        const price = market.price === null ? 'Waiting for quote' : formatPrice(market.price, market.digits);
+        const priceStateClass = market.price === null ? ' is-waiting' : (market.stale ? ' is-stale' : '');
+        const spikeCount = market.hasObservedSpike ? market.ticksSinceSpike.toLocaleString() : '—';
+        const signalState = market.stale && market.price !== null ? 'Quote stale' : (market.price === null ? 'Waiting for first quote' : (market.allFiltersPassed ? 'All five filters pass' : 'Live market quote'));
+        const rsi = market.rsi === null ? '—' : market.rsi.toFixed(1);
+        const dots = FILTER_NAMES.map(([key, label], index) => {
+          const value = market.filters[key];
+          const className = value === true ? ' is-pass' : value === false ? ' is-fail' : '';
+          const status = value === true ? 'pass' : value === false ? 'not met' : 'waiting for data';
+          return `<span class="filter-dot${className}" title="${index + 1}. ${label}: ${status}" aria-label="${index + 1}. ${label}: ${status}"></span>`;
+        }).join('');
+        card.className = `market-card ${config.family === 'boom' ? 'is-boom' : 'is-crash'}${market.allFiltersPassed ? ' is-a-plus' : ''}`;
+        card.setAttribute('aria-label', `${config.symbol}, ${price}, ${spikeCount} ticks since observed spike, RSI ${rsi}, ${filterCount} of 5 filters met${market.stale ? ', quote stale' : ''}. Open details.`);
+        card.innerHTML = `
+          <span class="market-heading"><span>${config.symbol}</span><span class="market-direction" aria-hidden="true">${config.family === 'boom' ? '↑' : '↓'}</span></span>
+          <span>
+            <span class="market-price${priceStateClass}">${price}</span>
+            <span class="market-data-state">${signalState}</span>
+          </span>
+          <span class="metric-row grid grid-cols-2 gap-1.5">
+            <span><span class="metric-label">Ticks since spike</span><span class="metric-value">${spikeCount}</span></span>
+            <span><span class="metric-label">RSI (14)</span><span class="metric-value">${rsi}</span></span>
+          </span>
+          <span class="setup-row">
+            <span class="setup-copy">Setup confidence<strong>${filterCount * 20}% <span style="font-size:10px;color:var(--bc-secondary);font-weight:400">· ${filterCount}/5</span></strong></span>
+            <span class="filter-dots" aria-label="Filter states: ${filterCount} of 5 currently pass">${dots}</span>
+          </span>`;
+      }
+
+      function renderDashboard() {
+        els.grid.innerHTML = MARKETS.map(config => `<button type="button" class="market-card ${config.family === 'boom' ? 'is-boom' : 'is-crash'}" data-symbol="${config.symbol}" aria-haspopup="dialog"></button>`).join('');
+        MARKETS.forEach(config => renderMarketCard(stateBySymbol[config.symbol]));
+      }
+
+      function renderConnection() {
+        const isLive = app.connection === 'live';
+        els.connectionDot.classList.toggle('is-live', isLive);
+        els.connectionLabel.textContent = app.connection === 'connecting'
+          ? 'Connecting'
+          : app.connection === 'live'
+            ? 'Live'
+            : app.connection === 'reconnecting'
+              ? 'Reconnecting'
+              : 'Disconnected';
+        els.connectionDot.setAttribute('aria-label', isLive ? 'WebSocket connected' : `WebSocket ${app.connection}`);
+        for (const market of Object.values(stateBySymbol)) {
+          renderMarketCard(market);
+        }
+        if (app.sheet === 'market' && app.selectedSymbol) renderMarketSheet(app.selectedSymbol);
+      }
+
+      function renderMarketSheet(symbol) {
+        const market = stateBySymbol[symbol];
+        if (!market) return;
+        const config = market.config;
+        const signal = market.signal;
+        const usableSignal = Boolean(signal && market.allFiltersPassed);
+        const stale = market.stale || app.connection !== 'live';
+        els.sheetTitle.textContent = `${symbol} details`;
+        els.sheetDescription.textContent = 'Setup checks and levels calculated from the current Deriv quote.';
+        const signalMarkup = usableSignal
+          ? `<div class="signal-type${config.family === 'crash' ? ' is-crash' : ''}">${signal.direction} ${config.family === 'boom' ? '📈' : '📉'}</div>
+             ${stale ? '<p class="sheet-description" role="status">Quote stale — levels are from the last qualifying tick, not a current entry.</p>' : ''}
+             <div class="levels-grid grid grid-cols-2 gap-2" aria-label="Trade levels">
+               <div class="level-readout"><span class="level-label">Entry</span><span class="level-value">${formatPrice(signal.entry, signal.digits)}</span></div>
+               <div class="level-readout is-stop"><span class="level-label">Stop loss (SL)</span><span class="level-value">${formatPrice(signal.sl, signal.digits)}</span></div>
+               <div class="level-readout"><span class="level-label">TP1 · Close 70%</span><span class="level-value">${formatPrice(signal.tp1, signal.digits)}</span></div>
+               <div class="level-readout"><span class="level-label">TP2 · Close 30%</span><span class="level-value">${formatPrice(signal.tp2, signal.digits)}</span></div>
+             </div>`
+          : `<div class="signal-type">No signal yet</div>
+             <p class="sheet-description">${market.price === null ? 'Waiting for the first live quote and enough ticks to evaluate every filter.' : 'All five filters must pass together before entry and exit levels are shown.'}${stale && market.price !== null ? ' The last quote is stale.' : ''}</p>`;
+        const filterRows = FILTER_NAMES.map(([key, label]) => {
+          const result = market.filters[key];
+          const status = result === true ? 'PASS' : result === false ? 'NOT MET' : 'WAITING FOR DATA';
+          const stateClass = result === true ? ' is-pass' : result === false ? ' is-fail' : '';
+          const detail = key === 'spikeInterval'
+            ? (market.hasObservedSpike ? `${market.ticksSinceSpike.toLocaleString()} / >${config.requiredTicks} ticks` : 'Waiting for first observed spike')
+            : key === 'slowGrind'
+              ? (market.ticks.length >= 15 ? (config.family === 'boom' ? 'Last 5 avg < first 5 avg' : 'Last 5 avg > first 5 avg') : 'Needs 15 ticks')
+              : key === 'deadZone'
+                ? (market.ticks.length >= 4 ? `Last 4 range < 0.3` : 'Needs 4 ticks')
+                : key === 'rsi'
+                  ? (market.rsi === null ? 'Needs 15 ticks' : `${market.rsi.toFixed(1)} · ${config.family === 'boom' ? '< 35' : '> 65'}`)
+                  : (market.ticks.length >= 21 ? 'No >2-point move in last 20 changes' : 'Needs 21 ticks');
+          return `<li class="filter-item"><span class="filter-item-label">${label}</span><span class="filter-item-state${stateClass}">${status} · ${detail}</span></li>`;
+        }).join('');
+        const confidence = Object.values(market.filters).filter(value => value === true).length * 20;
+        els.sheetContent.innerHTML = `${signalMarkup}
+          <h3 class="sheet-section-title">Five setup filters · ${confidence}% met</h3>
+          <ul class="filter-list">${filterRows}</ul>
+          <p class="privacy-note">Filter completion only — not a win-probability estimate or a prediction.</p>`;
+      }
+
+      function showSheet(sheetName, symbol) {
+        if (app.sheet === sheetName && app.selectedSymbol === symbol) return;
+        app.lastFocusedElement = document.activeElement;
+        app.sheet = sheetName;
+        app.selectedSymbol = sheetName === 'market' ? symbol : null;
+        els.sheetContent.innerHTML = '';
+        els.backdrop.hidden = false;
+        els.backdrop.setAttribute('aria-hidden', 'false');
+        if (sheetName === 'settings') renderSettingsSheet();
+        else renderMarketSheet(symbol);
+        requestAnimationFrame(() => els.sheetClose.focus());
+      }
+
+      function closeSheet() {
+        if (!app.sheet) return;
+        app.sheet = null;
+        app.selectedSymbol = null;
+        els.backdrop.hidden = true;
+        els.backdrop.setAttribute('aria-hidden', 'true');
+        els.sheetContent.innerHTML = '';
+        if (app.lastFocusedElement && document.contains(app.lastFocusedElement)) app.lastFocusedElement.focus();
+      }
+
+      function renderSettingsSheet(statusText = '', statusKind = '') {
+        els.sheetTitle.textContent = 'Settings';
+        els.sheetDescription.textContent = 'Deriv market feed and optional Telegram alerts.';
+        els.sheetContent.innerHTML = `
+          <form id="settingsForm" class="settings-form" novalidate>
+            <div class="field">
+              <label for="derivAppId">DERIV_APP_ID</label>
+              <input id="derivAppId" name="appId" type="text" inputmode="numeric" pattern="[0-9]+" autocomplete="off" value="" required aria-describedby="appIdHint">
+              <span id="appIdHint" class="field-hint">Deriv application ID. Defaults to 1089.</span>
+            </div>
+            <div class="field">
+              <label for="derivApiToken">DERIV_API_TOKEN</label>
+              <input id="derivApiToken" name="apiToken" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Optional — public ticks work without authorization">
+            </div>
+            <div class="field">
+              <label for="telegramBotToken">TELEGRAM_BOT_TOKEN</label>
+              <input id="telegramBotToken" name="telegramBotToken" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Optional — enables signal notifications">
+            </div>
+            <div class="field">
+              <label for="telegramChatId">TELEGRAM_CHAT_ID</label>
+              <input id="telegramChatId" name="telegramChatId" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Optional — your Telegram chat ID">
+            </div>
+            <div class="form-actions">
+              <button class="primary-button" type="submit">Save settings</button>
+              <button id="testTelegram" class="secondary-button" type="button">Test Telegram</button>
+            </div>
+            <p id="settingsStatus" class="form-status${statusKind ? ` is-${statusKind}` : ''}" aria-live="polite" role="status">${statusText}</p>
+            <p class="privacy-note">Tokens are stored in this browser’s localStorage and are not encrypted. Telegram credentials are used directly from this device.</p>
+          </form>`;
+        document.getElementById('derivAppId').value = app.settings.appId;
+        document.getElementById('derivApiToken').value = app.settings.apiToken;
+        document.getElementById('telegramBotToken').value = app.settings.telegramBotToken;
+        document.getElementById('telegramChatId').value = app.settings.telegramChatId;
+        document.getElementById('settingsForm').addEventListener('submit', saveSettings);
+        document.getElementById('testTelegram').addEventListener('click', testTelegram);
+      }
+
+      function setSettingsStatus(message, kind = '') {
+        const status = document.getElementById('settingsStatus');
+        if (!status) return;
+        status.textContent = message;
+        status.className = `form-status${kind ? ` is-${kind}` : ''}`;
+      }
+
+      function readFormSettings() {
+        const appId = document.getElementById('derivAppId').value.trim();
+        if (!/^\d+$/.test(appId)) {
+          document.getElementById('derivAppId').setAttribute('aria-invalid', 'true');
+          document.getElementById('derivAppId').focus();
+          setSettingsStatus('Enter a numeric Deriv app ID.', 'error');
+          return null;
+        }
+        document.getElementById('derivAppId').removeAttribute('aria-invalid');
+        return {
+          appId,
+          apiToken: document.getElementById('derivApiToken').value.trim(),
+          telegramBotToken: document.getElementById('telegramBotToken').value.trim(),
+          telegramChatId: document.getElementById('telegramChatId').value.trim()
+        };
+      }
+
+      function saveSettings(event) {
+        event.preventDefault();
+        const nextSettings = readFormSettings();
+        if (!nextSettings) return;
+        const reconnectRequired = nextSettings.appId !== app.settings.appId || nextSettings.apiToken !== app.settings.apiToken;
+        try {
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(nextSettings));
+        } catch (error) {
+          setSettingsStatus('Settings could not be saved in this browser.', 'error');
+          return;
+        }
+        app.settings = nextSettings;
+        setSettingsStatus(reconnectRequired ? 'Settings saved. Reconnecting to Deriv…' : 'Settings saved on this device.', 'success');
+        if (reconnectRequired) restartConnection();
+      }
+
+      async function postTelegram(botToken, chatId, text) {
+        const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text })
+        });
+        let result;
+        try { result = await response.json(); } catch (error) { result = null; }
+        if (!response.ok || !result || result.ok !== true) {
+          const details = result && result.description ? `: ${result.description}` : ` (HTTP ${response.status})`;
+          throw new Error(`Telegram did not accept the message${details}`);
+        }
+        return result;
+      }
+
+      async function testTelegram() {
+        if (app.telegramTestInFlight) return;
+        const botToken = document.getElementById('telegramBotToken').value.trim();
+        const chatId = document.getElementById('telegramChatId').value.trim();
+        if (!botToken || !chatId) {
+          setSettingsStatus('Enter both Telegram credentials to send a test.', 'error');
+          return;
+        }
+        const button = document.getElementById('testTelegram');
+        app.telegramTestInFlight = true;
+        button.disabled = true;
+        button.textContent = 'Sending…';
+        setSettingsStatus('Sending a test message…');
+        try {
+          await postTelegram(botToken, chatId, 'BoomCrash Signals Telegram test — notifications are connected.');
+          setSettingsStatus('Telegram test sent successfully.', 'success');
+        } catch (error) {
+          setSettingsStatus(error.message || 'Telegram test failed. Check the credentials and connection.', 'error');
+        } finally {
+          app.telegramTestInFlight = false;
+          const currentButton = document.getElementById('testTelegram');
+          if (currentButton) { currentButton.disabled = false; currentButton.textContent = 'Test Telegram'; }
+        }
+      }
+
+      async function sendTelegramSignal(signal) {
+        const { telegramBotToken, telegramChatId } = app.settings;
+        if (!telegramBotToken || !telegramChatId) return;
+        try {
+          await postTelegram(telegramBotToken, telegramChatId, signalMessage(signal));
+          announce('A+ setup alert sent to Telegram.');
+        } catch (error) {
+          announce(error.message || 'The Telegram signal alert could not be sent.');
+        }
+      }
+
+      function showSignalBanner(signal) {
+        app.bannerSignal = signal;
+        els.bannerTitle.textContent = `🔥 HIGH QUALITY SETUP - ${signal.symbol} ${signal.direction} ${signal.family === 'boom' ? '📈' : '📉'}`;
+        els.bannerLevels.textContent = `Entry ${formatPrice(signal.entry, signal.digits)}  ·  SL ${formatPrice(signal.sl, signal.digits)}  ·  TP1 ${formatPrice(signal.tp1, signal.digits)}  ·  TP2 ${formatPrice(signal.tp2, signal.digits)}`;
+        els.bannerOpen.setAttribute('aria-label', `Open ${signal.symbol} ${signal.direction} signal details`);
+        els.banner.hidden = false;
+        if (app.bannerTimer) clearTimeout(app.bannerTimer);
+        app.bannerTimer = setTimeout(dismissSignalBanner, 15000);
+      }
+
+      function dismissSignalBanner() {
+        els.banner.hidden = true;
+        app.bannerSignal = null;
+        if (app.bannerTimer) clearTimeout(app.bannerTimer);
+        app.bannerTimer = null;
+      }
+
+      function announce(message) {
+        els.runtimeNotice.textContent = message;
+      }
+
+      function scheduleReconnect(generation) {
+        if (app.reconnectTimer) clearTimeout(app.reconnectTimer);
+        const delay = Math.min(30000, 1000 * (2 ** Math.min(app.reconnectAttempts, 5)));
+        app.reconnectAttempts += 1;
+        app.reconnectTimer = setTimeout(() => {
+          app.reconnectTimer = null;
+          if (generation === app.connectionGeneration) connectDeriv();
+        }, delay);
+      }
+
+      function setAllMarketsStale() {
+        for (const market of Object.values(stateBySymbol)) {
+          market.stale = true;
+          renderMarketCard(market);
+        }
+        if (app.sheet === 'market' && app.selectedSymbol) renderMarketSheet(app.selectedSymbol);
+      }
+
+      function connectDeriv() {
+        if (!navigator.onLine) {
+          app.connection = 'disconnected';
+          renderConnection();
+          announce('Offline. Waiting for an internet connection.');
+          scheduleReconnect(app.connectionGeneration);
+          return;
+        }
+        if (app.reconnectTimer) { clearTimeout(app.reconnectTimer); app.reconnectTimer = null; }
+        const generation = app.connectionGeneration;
+        app.connection = 'connecting';
+        renderConnection();
+        const appId = app.settings.appId || '1089';
+        let ws;
+        try {
+          ws = new WebSocket(`wss://ws.binaryws.com/websockets/v3?app_id=${encodeURIComponent(appId)}`);
+        } catch (error) {
+          app.connection = 'reconnecting';
+          renderConnection();
+          scheduleReconnect(generation);
+          return;
+        }
+        app.socket = ws;
+        ws.addEventListener('open', () => {
+          if (generation !== app.connectionGeneration || app.socket !== ws) return;
+          app.connection = 'live';
+          app.connectionMessage = '';
+          app.reconnectAttempts = 0;
+          renderConnection();
+          if (app.settings.apiToken) ws.send(JSON.stringify({ authorize: app.settings.apiToken }));
+          for (const market of MARKETS) ws.send(JSON.stringify({ ticks: market.symbol, subscribe: 1 }));
+          announce('Connected to Deriv. Waiting for live ticks.');
+        });
+        ws.addEventListener('message', event => {
+          if (generation !== app.connectionGeneration || app.socket !== ws) return;
+          let message;
+          try { message = JSON.parse(event.data); } catch (error) { return; }
+          if (message.error) {
+            const description = String(message.error.message || message.error.code || 'Deriv returned an error.');
+            if (message.msg_type === 'authorize') {
+              app.connectionMessage = 'Authorization failed; public tick subscriptions remain available.';
+              announce(`Deriv authorization failed: ${description}`);
+            } else {
+              announce(`Deriv: ${description}`);
+            }
+            return;
+          }
+          if (message.msg_type === 'tick' && message.tick) {
+            const quote = Number(message.tick.quote);
+            processTick(message.tick.symbol, quote, message.tick.pip_size);
+          }
+        });
+        ws.addEventListener('error', () => {
+          if (generation !== app.connectionGeneration || app.socket !== ws) return;
+          app.connection = 'reconnecting';
+          setAllMarketsStale();
+          renderConnection();
+        });
+        ws.addEventListener('close', () => {
+          if (generation !== app.connectionGeneration || app.socket !== ws) return;
+          app.socket = null;
+          app.connection = 'reconnecting';
+          setAllMarketsStale();
+          renderConnection();
+          announce('Deriv connection closed. Reconnecting…');
+          scheduleReconnect(generation);
+        });
+      }
+
+      function restartConnection() {
+        app.connectionGeneration += 1;
+        if (app.reconnectTimer) { clearTimeout(app.reconnectTimer); app.reconnectTimer = null; }
+        if (app.socket) {
+          const oldSocket = app.socket;
+          app.socket = null;
+          try { oldSocket.close(); } catch (error) { /* socket already closed */ }
+        }
+        app.reconnectAttempts = 0;
+        app.connection = 'connecting';
+        setAllMarketsStale();
+        renderConnection();
+        connectDeriv();
+      }
+
+      function registerInteractions() {
+        els.grid.addEventListener('click', event => {
+          const card = event.target.closest('[data-symbol]');
+          if (card) showSheet('market', card.dataset.symbol);
+        });
+        els.settingsTrigger.addEventListener('click', () => showSheet('settings'));
+        els.sheetClose.addEventListener('click', closeSheet);
+        els.backdrop.addEventListener('click', event => { if (event.target === els.backdrop) closeSheet(); });
+        els.bannerOpen.addEventListener('click', () => {
+          if (app.bannerSignal) showSheet('market', app.bannerSignal.symbol);
+        });
+        els.bannerDismiss.addEventListener('click', dismissSignalBanner);
+        document.addEventListener('keydown', event => {
+          if (!app.sheet) return;
+          if (event.key === 'Escape') { event.preventDefault(); closeSheet(); return; }
+          if (event.key !== 'Tab') return;
+          const focusable = [...els.sheet.querySelectorAll('button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')];
+          if (!focusable.length) { event.preventDefault(); els.sheet.focus(); return; }
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        });
+        window.addEventListener('online', () => {
+          app.connection = 'connecting';
+          renderConnection();
+          restartConnection();
+        });
+        window.addEventListener('offline', () => {
+          app.connection = 'disconnected';
+          app.connectionGeneration += 1;
+          if (app.reconnectTimer) { clearTimeout(app.reconnectTimer); app.reconnectTimer = null; }
+          if (app.socket) { const oldSocket = app.socket; app.socket = null; try { oldSocket.close(); } catch (error) { /* socket already closed */ } }
+          setAllMarketsStale();
+          renderConnection();
+          announce('Offline. Quotes are stale until the connection returns.');
+        });
+      }
+
+      function registerServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+        if (location.protocol === 'file:') {
+          announce('Opened as a local file. Live WebSocket works if allowed; PWA caching requires HTTPS or localhost.');
+          return;
+        }
+        if (!window.isSecureContext) {
+          announce('Live feed works here; PWA service workers require HTTPS or localhost.');
+          return;
+        }
+        navigator.serviceWorker.register('./sw.js').catch(() => {
+          announce('Live feed is available. Service-worker caching could not be enabled on this origin.');
+        });
+      }
+
+      renderDashboard();
+      registerInteractions();
+      renderConnection();
+      if (location.protocol === 'file:') {
+        announce('Opened as a local file. Live WebSocket works if allowed; PWA caching requires HTTPS or localhost.');
+      }
+      registerServiceWorker();
+      connectDeriv();
+    })();
+  </script>
+</body>
+</html>
