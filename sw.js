@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'boomcrash-shell-v1';
+const CACHE_NAME = 'boomcrash-shell-v2';
 const APP_SHELL = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', event => {

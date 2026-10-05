@@ -7,11 +7,11 @@
   <meta name="description" content="Live Boom and Crash market signals with five transparent setup filters.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>BoomCrash Signals</title>
+  <title>boom &amp; crash app</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/png" href="./icon-512.png">
   <link rel="apple-touch-icon" href="./icon-512.png">
-  <meta name="apple-mobile-web-app-title" content="B&C Signals">
+  <meta name="apple-mobile-web-app-title" content="boom &amp; crash app">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.48.0/dist/tabler-icons.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -165,7 +165,7 @@
   <main class="app-shell mx-auto w-full max-w-[540px]">
     <header class="app-header flex items-center justify-between gap-2.5">
       <div>
-        <h1 class="app-title">BoomCrash Signals</h1>
+        <h1 class="app-title">boom &amp; crash app</h1>
         <div class="connection" aria-live="polite" aria-atomic="true">
           <span id="connectionDot" class="connection-dot" aria-hidden="true"></span>
           <span id="connectionLabel">Connecting</span>
@@ -639,7 +639,7 @@
         button.textContent = 'Sending…';
         setSettingsStatus('Sending a test message…');
         try {
-          await postTelegram(botToken, chatId, 'BoomCrash Signals Telegram test — notifications are connected.');
+          await postTelegram(botToken, chatId, 'boom & crash app Telegram test — notifications are connected.');
           setSettingsStatus('Telegram test sent successfully.', 'success');
         } catch (error) {
           setSettingsStatus(error.message || 'Telegram test failed. Check the credentials and connection.', 'error');
